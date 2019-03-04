@@ -64,12 +64,13 @@ class Cuber2x(object):
 
     # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     #received_solution = "R2 L' D"
-    received_solution = "U' L' U' F' R2 B' R F U B2 U B' L U' F U R F' "
+    received_solution = "U' L' U' F' R2"
+    #received_solution = "U' L' U' F' R2 B' R F U B2 U B' L U' F U R F' "
     #received_solution = "R2 L' D F2 R' D' R' L U' D R D B2 R' U D2"
     #received_solution = "F B R U D R2 D B' F2 D' B' L U' L2 B2 R B D2 R2 F R2 D2 R' U B' "
     curr_turn = 0
     next_turn = curr_turn + 2
-
+    last_turn = -1 #can only be updated after first turn is made
 
     def __init__(self):
         self.shutdown = False
@@ -198,98 +199,121 @@ class Cuber2x(object):
         self.received_solution = self.received_solution.replace('\r','').replace('\n','').replace('b','').replace('"','')
 
         print("cleaned solution: \n", self.received_solution)
+    
+
+    def apply_first_two_turns(self):
+        
+        print('lastturn: ', self.last_turn)
+        print('nextturn: ', self.next_turn)
+
+
+        if self.last_turn[0] == 'U':
+            self.elevate(self.elevate_3x3_1_row)
+            
+            self.turn_direction(self.last_turn)
+
+            print(self.last_turn)
+            
+            self.u_on_top()
+        
+        elif self.last_turn[0] == 'L':
+            self.elevate(self.elevate_3x3_fully)
+            self.turn_cage(self.turn_cw_free, 0)
+            self.flip(self.flipper_up)
+            self.elevate(self.elevator_final_pos)
+            self.flip(self.flipper_final_pos)
+            self.elevate(self.elevate_3x3_1_row)
+
+            self.turn_direction(self.last_turn)
+                            
+            print(self.last_turn)
+            self.l_on_top()
+
+        elif self.last_turn[0] == 'F':
+            self.flip(self.flipper_up)
+            self.elevate(self.elevate_3x3_1_row)
+            
+            self.flip(self.flipper_final_pos)
+            self.turn_direction(self.last_turn)
+                        
+            print(self.last_turn)
+            self.f_on_top()
+            
+
+        elif self.last_turn[0] == 'R':
+            self.elevate(self.elevate_3x3_fully)
+            self.turn_cage(self.turn_ccw_free, 0)
+            self.flip(self.flipper_up)
+            self.elevate(self.elevator_final_pos)
+            self.flip(self.flipper_final_pos)
+            self.elevate(self.elevate_3x3_1_row)
+
+            self.turn_direction(self.last_turn)
+            
+            print(self.last_turn)
+            self.r_on_top()
+
+        elif self.last_turn[0] == 'B':
+            self.elevate(self.elevate_3x3_fully)
+            self.turn_cage(self.turn_cw2_free, 0)
+            self.elevate(self.elevator_final_pos)
+            self.flip(self.flipper_up)
+            self.elevate(self.elevate_3x3_1_row)
+            self.flip(self.flipper_final_pos)
+
+
+            self.turn_direction(self.last_turn)
+
+            print(self.last_turn)
+            self.b_on_top() 
+
+        elif self.last_turn[0] == 'D':
+
+            self.flip(self.flipper_up)
+            self.elevate(self.elevate_3x3_fully)
+            self.turn_cage(self.turn_cw2_free, 0)
+            self.elevate(self.elevator_final_pos)
+            self.flip(self.flipper_final_pos)
+            self.elevate(self.elevate_3x3_1_row)
+            
+            self.turn_direction(self.last_turn)
+
+            print(self.last_turn)
+            self.d_on_top()
 
     def apply_solution(self):
         
         print(self.received_solution)
         self.received_solution = self.received_solution.split();
         
-        for i in range(0, len(self.received_solution)-1, 2):
+        self.last_turn = self.received_solution[0] 
+        for i in range(1, len(self.received_solution)-1):
             #print(self.received_solution[i], len(self.received_solution[i]))
-
             
-            self.curr_turn = self.received_solution[i]
-            #this is broken because if sequence is "F U F" next value will not be assigned
+            self.next_turn = self.received_solution[i]# really [i+1]
+            if i == 1:
+                self.apply_first_two_turns()
+            #self.curr_turn = self.received_solution[i]
             #if self.received_solution[i] != self.received_solution[-1]:
             
-            self.next_turn = self.received_solution[i+1]
-            
-            print('currturn: ', self.curr_turn)
-            print('nextturn: ', self.next_turn)
 
 
-            if self.curr_turn[0] == 'U':
-                self.elevate(self.elevate_3x3_1_row)
-                
-                self.turn_direction(self.curr_turn)
-
-                print(self.curr_turn)
-                
+            if self.last_turn[0] == 'U':
                 self.u_on_top()
             
-            elif self.curr_turn[0] == 'L':
-                self.elevate(self.elevate_3x3_fully)
-                self.turn_cage(self.turn_cw_free, 0)
-                self.flip(self.flipper_up)
-                self.elevate(self.elevator_final_pos)
-                self.flip(self.flipper_final_pos)
-                self.elevate(self.elevate_3x3_1_row)
-
-                self.turn_direction(self.curr_turn)
-                                
-                print(self.curr_turn)
+            elif self.last_turn[0] == 'L':
                 self.l_on_top()
 
-            elif self.curr_turn[0] == 'F':
-                self.flip(self.flipper_up)
-                self.elevate(self.elevate_3x3_1_row)
-                
-                self.flip(self.flipper_final_pos)
-                self.turn_direction(self.curr_turn)
-                            
-                print(self.curr_turn)
+            elif self.last_turn[0] == 'F':
                 self.f_on_top()
-                
 
-            elif self.curr_turn[0] == 'R':
-                self.elevate(self.elevate_3x3_fully)
-                self.turn_cage(self.turn_ccw_free, 0)
-                self.flip(self.flipper_up)
-                self.elevate(self.elevator_final_pos)
-                self.flip(self.flipper_final_pos)
-                self.elevate(self.elevate_3x3_1_row)
-
-                self.turn_direction(self.curr_turn)
-                
-                print(self.curr_turn)
+            elif self.last_turn[0] == 'R':
                 self.r_on_top()
 
-            elif self.curr_turn[0] == 'B':
-                self.elevate(self.elevate_3x3_fully)
-                self.turn_cage(self.turn_cw2_free, 0)
-                self.elevate(self.elevator_final_pos)
-                self.flip(self.flipper_up)
-                self.elevate(self.elevate_3x3_1_row)
-                self.flip(self.flipper_final_pos)
-
-
-                self.turn_direction(self.curr_turn)
-
-                print(self.curr_turn)
+            elif self.last_turn[0] == 'B':
                 self.b_on_top() 
 
-            elif self.curr_turn[0] == 'D':
-
-                self.flip(self.flipper_up)
-                self.elevate(self.elevate_3x3_fully)
-                self.turn_cage(self.turn_cw2_free, 0)
-                self.elevate(self.elevator_final_pos)
-                self.flip(self.flipper_final_pos)
-                self.elevate(self.elevate_3x3_1_row)
-                
-                self.turn_direction(self.curr_turn)
-
-                print(self.curr_turn)
+            elif self.last_turn[0] == 'D':
                 self.d_on_top()
 
                 
@@ -320,6 +344,7 @@ class Cuber2x(object):
            
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
         elif self.next_turn[0] == 'R': #might be broken throughout
@@ -332,17 +357,17 @@ class Cuber2x(object):
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
 
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
         elif self.next_turn[0] == 'F':
             self.flip(self.flipper_up)
             self.elevate(self.elevate_3x3_1_row)
             
-            print('pre-flip')
             self.flip(self.flipper_final_pos)        
-            print('flipped')
             self.turn_direction(self.next_turn)
 
+            self.last_turn = self.next_turn
             print(self.next_turn)
            
 
@@ -355,7 +380,8 @@ class Cuber2x(object):
             self.flip(self.flipper_final_pos)
 
             self.turn_direction(self.next_turn)
-
+            
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
 
@@ -370,6 +396,7 @@ class Cuber2x(object):
 
             self.turn_direction(self.next_turn)
 
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
     def l_on_top(self):
@@ -383,6 +410,7 @@ class Cuber2x(object):
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
 
+            self.last_turn = self.next_turn
             print(self.next_turn)
                 
         elif self.next_turn[0] == 'B':
@@ -395,6 +423,7 @@ class Cuber2x(object):
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
 
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
 
@@ -404,6 +433,7 @@ class Cuber2x(object):
             self.flip(self.flipper_final_pos)
             
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
 
@@ -418,6 +448,7 @@ class Cuber2x(object):
             
             
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
             
 
@@ -430,6 +461,7 @@ class Cuber2x(object):
             self.elevate(self.elevate_3x3_1_row)
 
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
     def f_on_top(self):
@@ -442,6 +474,7 @@ class Cuber2x(object):
            
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
             
@@ -454,6 +487,7 @@ class Cuber2x(object):
 
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
              
         elif self.next_turn[0] == 'D':
@@ -462,6 +496,7 @@ class Cuber2x(object):
             
             self.flip(self.flipper_final_pos)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
 
@@ -474,6 +509,7 @@ class Cuber2x(object):
 
             self.flip(self.flipper_final_pos)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
 
@@ -486,6 +522,7 @@ class Cuber2x(object):
             self.elevate(self.elevate_3x3_1_row)
 
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn) 
 
         
@@ -499,6 +536,7 @@ class Cuber2x(object):
            
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
 
@@ -510,6 +548,7 @@ class Cuber2x(object):
             self.flip(self.flipper_final_pos)
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
 
@@ -519,6 +558,7 @@ class Cuber2x(object):
             
             self.flip(self.flipper_final_pos)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
 
@@ -531,6 +571,7 @@ class Cuber2x(object):
 
             self.flip(self.flipper_final_pos)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
 
@@ -543,6 +584,7 @@ class Cuber2x(object):
             self.elevate(self.elevate_3x3_1_row)
 
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
     def b_on_top(self):
@@ -555,6 +597,7 @@ class Cuber2x(object):
            
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
         elif self.next_turn[0] == 'L':
@@ -565,6 +608,7 @@ class Cuber2x(object):
             self.flip(self.flipper_final_pos)
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
         elif self.next_turn[0] == 'D':
@@ -573,6 +617,7 @@ class Cuber2x(object):
             
             self.flip(self.flipper_final_pos)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
         elif self.next_turn[0] == 'U':
@@ -584,6 +629,7 @@ class Cuber2x(object):
 
             self.flip(self.flipper_final_pos)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
         elif self.next_turn[0] == 'F':
@@ -595,6 +641,7 @@ class Cuber2x(object):
             self.elevate(self.elevate_3x3_1_row)
 
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
     def d_on_top(self):
@@ -607,6 +654,7 @@ class Cuber2x(object):
            
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
         elif self.next_turn[0] == 'L':
@@ -617,6 +665,7 @@ class Cuber2x(object):
             self.flip(self.flipper_final_pos)
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
         elif self.next_turn[0] == 'F':
@@ -625,6 +674,7 @@ class Cuber2x(object):
             
             self.flip(self.flipper_final_pos)
             self.turn_direction(self.next_turn)        
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
         elif self.next_turn[0] == 'B':
@@ -636,6 +686,7 @@ class Cuber2x(object):
 
             self.flip(self.flipper_final_pos)
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
 
         elif self.next_turn[0] == 'U':
@@ -647,6 +698,7 @@ class Cuber2x(object):
             self.elevate(self.elevate_3x3_1_row)
 
             self.turn_direction(self.next_turn)
+            self.last_turn = self.next_turn
             print(self.next_turn)
         
 if __name__== '__main__':
