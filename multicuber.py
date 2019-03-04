@@ -16,11 +16,10 @@ log = logging.getLogger(__name__)
 
 class Cuber2x(object):
     
-
     #Elevator Variables
-    elevator_speed_up_fast = 700
-    elevator_speed_up_slow = 400
-    
+    elevator_up_speed = 400
+    elevator_down_speed = 600
+
     elevator_final_pos = 0
 
     elevate_2x2_fully = -570
@@ -32,19 +31,22 @@ class Cuber2x(object):
     
     elevate_from_2_fully = -70
     elevate_from_1_fully = -170
+
+    elevate_quick_flip = -340
+
+    elevator_dest = 0 # this changes through out so this is traced and turns when it is neccessary.
     #Flipper Variables
-    flipper_speed_const = 600
+    flipper_speed_const = 700
     
-    flipper_final_pos = -1
+    flipper_final_pos = 0 
     flipper_up = 151
 
     #Cage Variables
-    cage_speed_full_cube = 700
-    cage_speed_normal = 550
+    cage_speed_full_cube = 500
    
-    cw_adj = -35
-    ccw_adj = 35
-    cw2_adj = -40
+    cw_adj = 150 #adjusts aren't really needed I just don't want to recode
+    ccw_adj = -150 
+    cw2_adj = 300
 
     turn_cw_free = 150
     turn_ccw_free = -150
@@ -56,7 +58,8 @@ class Cuber2x(object):
     turn_cw2_blocked = 340
 
     turn_final_pos = 0
-
+    
+    cage_turn_dest = 0 #used for making smooth turns
 
     #Networking
     HOST = "169.254.17.157"
@@ -64,7 +67,7 @@ class Cuber2x(object):
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     #received_solution = "L U B' U' R L' B R' F B' D R D' F'" #anaconda
-    #received_solution = "R2 L2 F2 B2"
+    #received_solution = "B U L"
     #received_solution = "U' R2 L2 F2 B2 U' R L F B' U F2 D2 R2 L2 F2 U2 F2 U' F2" #kilt (scottish skirt)
     #received_solution = "U' L' U' F' R2 B' R F U B2 U B' L U' F U R F'" #cube in a cube in a cube
     #received_solution = "R2 L' D F2 R' D' R' L U' D R D B2 R' U D2"
@@ -133,28 +136,94 @@ class Cuber2x(object):
         self.state = [self.state[t] for t in transformation]
 
 
+    def is_almost_done_turning(self):
+        while True:
+            if abs(self.cage.position - self.cage_turn_dest) <= 3: 
+                #print('cage curr pos: ', abs(self.cage.position - self.cage_turn_dest) <= 3)
+                #print()
+                break
+            else:
+                sleep(0.01)
+                #print('cage pos ', self.cage.position," : curr pos: ", self.cage_turn_dest)
+                #print('cage curr pos: ', abs(self.cage.position - self.cage_turn_dest))
+                #print('turning sleeping...')
+
+    def is_almost_done_flipping(self):
+        while True:
+            if (abs(self.flipper.position - self.flipper_final_pos) <= 3) or (abs(self.flipper.position - self.flipper_up) <= 3):
+
+                #print('flipper final: ', abs(self.flipper.position - self.flipper_final_pos))
+                #print('flipper up: ', abs(self.flipper.position - self.flipper_up))
+                #print()
+                break
+            else:
+                sleep(0.01)
+                #print('flipping sleeping')
+
+    def is_almost_done_elevating(self):
+        while True:
+            if(abs(self.elevator.position - self.elevator_dest) <= 3):
+                break
+            else:
+                sleep(0.01)
+
     def elevate(self, level):
-        self.elevator.on_to_position(SpeedDPS(Cuber2x.elevator_speed_up_fast), level)
+
+        self.is_almost_done_turning()
+        self.is_almost_done_flipping()
+            
+
+        self.elevator_dest = level
+        self.elevator.on_to_position(SpeedDPS(Cuber2x.elevator_up_speed), level, block=False)
+    
+    
+    
+    def drop(self, level):
         
+        self.is_almost_done_turning()
+        self.is_almost_done_flipping()
+
+        self.elevator_dest = level 
+        self.elevator.on_to_position(SpeedDPS(Cuber2x.elevator_down_speed), level, block=False)
+
     
     def flip(self, direction):
-        self.flipper.on_to_position(SpeedDPS(Cuber2x.flipper_speed_const), direction)
-        #sleep(0.02)
+        
+        self.is_almost_done_elevating()
+        self.is_almost_done_turning()
+
+        self.flipper.on_to_position(SpeedDPS(Cuber2x.flipper_speed_const), direction, block=False)
 
 
     def turn_cage(self, direction, adj, trans):
-        
+           
+        self.is_almost_done_elevating()
+
         #if adj is 0 transformation is happening, because side isn't being turned
+        #when adj is 0 it must complete turn before going down unlike full rotation which doesn't need alignment.
+
+        self.cage.position = 0
+        #print("direction: ", direction, " adjustment: ", adj)
         if adj == 0:
             self.apply_trans(trans)
+            
+            #self.curr_cage_pos = direction + adj 
+            self.cage_turn_dest = direction 
+            self.cage.on_to_position(SpeedDPS(self.cage_speed_full_cube), direction, block=False)
+            #print("Rotated to: ", self.curr_cage_pos)
+            #sleep(2)
+            
+        else:   
 
-        self.cage.on_for_degrees(SpeedDPS(Cuber2x.cage_speed_full_cube), direction)
-        sleep(0.02)
-
-        self.cage.on_for_degrees(SpeedDPS(Cuber2x.cage_speed_full_cube), adj)
-        #sleep(0.02)
-
+            #self.curr_cage_pos = direction + adj
+            
+            self.cage_turn_dest = adj
+            self.cage.on_to_position(SpeedDPS(self.cage_speed_full_cube), direction)
+            self.cage.on_to_position(SpeedDPS(multicuber.cage_speed_full_cube), adj, block=False)
+            #print("Rotated to: ", self.curr_cage_pos)
+            #sleep(2)
     
+            
     def scan(self):
         sleep(1) 
         for x in range(3): 
@@ -163,18 +232,18 @@ class Cuber2x(object):
             
             self.turn_cage(self.turn_cw_free, 0, self.cw_trans)
 
-            self.elevate(self.elevator_final_pos)
+            self.drop(self.elevator_final_pos)
 
         sleep(1)
         self.flip(self.flipper_up)
-        self.elevate(-200)
+        self.elevate(self.elevate_quick_flip)
         self.flip(self.flipper_final_pos)
-        self.elevate(self.elevator_final_pos)
+        self.drop(self.elevator_final_pos)
         sleep(1)
         
         self.elevate(self.elevate_3x3_fully)
         self.turn_cage(self.turn_cw2_free, 0, self.cw2_trans)
-        self.elevate(self.elevator_final_pos)
+        self.drop(self.elevator_final_pos)
 
         sleep(1)
         log.info('waiting for solution....')
@@ -188,7 +257,7 @@ class Cuber2x(object):
         self.elevate(self.elevate_3x3_fully)
         self.turn_cage(self.turn_ccw_free, 0, self.ccw_trans)
         self.flip(self.flipper_final_pos)
-        self.elevate(self.elevator_final_pos)
+        self.drop(self.elevator_final_pos)
 
         #self.receive_solution()
     
@@ -224,7 +293,6 @@ class Cuber2x(object):
                 self.future_turn = self.next_turn
             else:
                 self.future_turn = self.received_solution[i+1]
-
 
             if self.state[0] == 'U':
                 self.u_on_top()
@@ -270,7 +338,7 @@ class Cuber2x(object):
             if self.keep_cube_elevated():
                 return
             else:
-                self.elevate(self.elevator_final_pos)
+                self.drop(self.elevator_final_pos)
 
         elif this_turn[-1] == "'":
             self.turn_cage(self.turn_ccw_blocked, self.ccw_adj, None)
@@ -278,7 +346,7 @@ class Cuber2x(object):
             if self.keep_cube_elevated():
                 return 
             else:
-                self.elevate(self.elevator_final_pos)
+                self.drop(self.elevator_final_pos)
 
         elif this_turn[-1] == '2':
             self.turn_cage(self.turn_cw2_blocked, self.cw2_adj, None)
@@ -286,7 +354,7 @@ class Cuber2x(object):
             if self.keep_cube_elevated():
                 return
             else: 
-                self.elevate(self.elevator_final_pos)
+                self.drop(self.elevator_final_pos)
 
 
 
@@ -308,7 +376,7 @@ class Cuber2x(object):
         #print("true: ", self.elevator.position, ":", self.elevate_3x3_fully) 
         self.turn_cage(self.turn_cw_free, 0, self.cw_trans)
         self.flip(self.flipper_up)
-        self.elevate(self.elevator_final_pos)
+        self.drop(self.elevator_final_pos)
         self.flip(self.flipper_final_pos)
         self.apply_trans(self.down_trans)
         self.elevate(self.elevate_3x3_1_row)
@@ -322,7 +390,6 @@ class Cuber2x(object):
         self.apply_trans(self.up_trans)
         self.elevate(self.elevate_3x3_1_row)
         
-        self.flip(self.flipper_final_pos)        
         self.turn_direction(self.next_turn)
 
         self.last_turn = self.next_turn
@@ -337,7 +404,7 @@ class Cuber2x(object):
         #print("true: ", self.elevator.position, ":", self.elevate_3x3_fully) 
         self.turn_cage(self.turn_ccw_free, 0, self.ccw_trans)
         self.flip(self.flipper_up)
-        self.elevate(self.elevator_final_pos)
+        self.drop(self.elevator_final_pos)
         self.flip(self.flipper_final_pos)
         self.apply_trans(self.down_trans)
         
@@ -349,11 +416,11 @@ class Cuber2x(object):
     
     def turn_b(self):
 
-        self.elevate(-200) #doesn't need to elevate fully as it's just being flipped
+        self.elevate(self.elevate_quick_flip) #doesn't need to elevate fully as it's just being flipped
          
         #print("true: ", self.elevator.position, ":", self.elevate_3x3_fully) 
         self.flip(self.flipper_up)
-        self.elevate(self.elevator_final_pos)
+        self.drop(self.elevator_final_pos)
         self.flip(self.flipper_final_pos)
         self.apply_trans(self.down_trans)
         self.elevate(self.elevate_3x3_1_row)
@@ -422,13 +489,11 @@ class Cuber2x(object):
     def triumph(self):
         self.elevate(self.elevate_3x3_fully)
         self.turn_cage(self.turn_cw2_free*4, 0 ,self.cw2_trans)
-        self.state = ['U','L','F','R','B','D']
-        self.elevate(self.elevator_final_pos)
+        self.cage.on_to_position(SpeedDPS(self.cage_speed_full_cube), self.turn_cw2_free*4)
+        self.elevator.on_to_position(SpeedDPS(Cuber2x.elevator_down_speed), self.elevator_final_pos)
 
 
-
-
-
+        self.cage.on_to_position(SpeedDPS(self.cage_speed_full_cube), self.turn_cw2_free*4)
 if __name__== '__main__':
    
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(filename)12s %(levelname)8s: %(message)s')
@@ -443,11 +508,12 @@ if __name__== '__main__':
 
     try:
         
-        multicuber.connect_to_server()
-        multicuber.scan()
-        multicuber.decode_solution()
+        #multicuber.connect_to_server()
+        #multicuber.scan()
         multicuber.apply_solution()
         multicuber.triumph()
+        #multicuber.cage.on_to_position(SpeedDPS(multicuber.cage_speed_full_cube), 185)
+        #multicuber.cage.on_to_position(SpeedDPS(multicuber.cage_speed_full_cube), 150)
         multicuber.shutdown_robot()
 
 
