@@ -44,6 +44,7 @@ class Cuber2x(object):
    
     cw_adj = -35
     ccw_adj = 35
+    cw2_adj = -40
 
     turn_cw_free = 150
     turn_ccw_free = -150
@@ -52,7 +53,7 @@ class Cuber2x(object):
     turn_ccw_blocked = -185
 
     turn_cw2_free = 300
-    turn_cw2_blocked = 300
+    turn_cw2_blocked = 345
 
     turn_final_pos = 0
 
@@ -62,8 +63,9 @@ class Cuber2x(object):
     PORT = 8080
 
     # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    received_solution = "F R U D'"
+    #received_solution = "R2 L' D"
+    received_solution = "U' L' U' F' R2 B' R F U B2 U B' L U' F U R F' "
+    #received_solution = "R2 L' D F2 R' D' R' L U' D R D B2 R' U D2"
     #received_solution = "F B R U D R2 D B' F2 D' B' L U' L2 B2 R B D2 R2 F R2 D2 R' U B' "
     curr_turn = 0
     next_turn = curr_turn + 2
@@ -202,18 +204,22 @@ class Cuber2x(object):
         print(self.received_solution)
         self.received_solution = self.received_solution.split();
         
-        for i in range(0, len(self.received_solution), 2):
+        for i in range(0, len(self.received_solution)-1, 2):
             #print(self.received_solution[i], len(self.received_solution[i]))
 
             
             self.curr_turn = self.received_solution[i]
-            if self.received_solution[i] != self.received_solution[-1]:
-                self.next_turn = self.received_solution[i+1]
-                
+            #this is broken because if sequence is "F U F" next value will not be assigned
+            #if self.received_solution[i] != self.received_solution[-1]:
+            
+            self.next_turn = self.received_solution[i+1]
+            
+            print('currturn: ', self.curr_turn)
+            print('nextturn: ', self.next_turn)
+
 
             if self.curr_turn[0] == 'U':
                 self.elevate(self.elevate_3x3_1_row)
-                self.turn_cage(self.turn_cw_blocked, 0)
                 
                 self.turn_direction(self.curr_turn)
 
@@ -299,9 +305,9 @@ class Cuber2x(object):
             self.turn_cage(self.turn_ccw_blocked, self.ccw_adj)
             self.elevate(self.elevator_final_pos)
 
-        elif this_turn == '2':
+        elif this_turn[-1] == '2':
             self.turn_cage(self.turn_cw2_blocked, self.cw2_adj)
-            self.elevate(self.elevate_final_pos)
+            self.elevate(self.elevator_final_pos)
 
 
     def u_on_top(self):
@@ -316,11 +322,12 @@ class Cuber2x(object):
             self.turn_direction(self.next_turn)
             print(self.next_turn)
 
-        elif self.next_turn[0] == 'R':
+        elif self.next_turn[0] == 'R': #might be broken throughout
             self.elevate(self.elevate_3x3_fully)
             self.turn_cage(self.turn_ccw_free, 0)
             self.flip(self.flipper_up)
             self.elevate(self.elevator_final_pos)
+            self.flip(self.flipper_final_pos)
 
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
@@ -383,6 +390,7 @@ class Cuber2x(object):
             self.turn_cage(self.turn_ccw_free, 0)
             self.flip(self.flipper_up)
             self.elevate(self.elevator_final_pos)
+            self.flip(self.flipper_final_pos)
 
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
@@ -406,7 +414,7 @@ class Cuber2x(object):
             self.flip(self.flipper_up)
             self.elevate(self.elevate_3x3_1_row)
 
-            self.flip(flipper_final_pos)
+            self.flip(self.flipper_final_pos)
             
             
             self.turn_direction(self.next_turn)
@@ -442,6 +450,7 @@ class Cuber2x(object):
             self.turn_cage(self.turn_ccw_free, 0)
             self.flip(self.flipper_up)
             self.elevate(self.elevator_final_pos)
+            self.flip(self.flipper_final_pos)
 
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
@@ -463,7 +472,7 @@ class Cuber2x(object):
             self.flip(self.flipper_up)
             self.elevate(self.elevate_3x3_1_row)
 
-            self.flip(flipper_final_pos)
+            self.flip(self.flipper_final_pos)
             self.turn_direction(self.next_turn)
             print(self.next_turn)
 
@@ -498,7 +507,7 @@ class Cuber2x(object):
             self.turn_cage(self.turn_ccw_free, 0)
             self.flip(self.flipper_up)
             self.elevate(self.elevator_final_pos)
-
+            self.flip(self.flipper_final_pos)
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
             print(self.next_turn)
@@ -553,7 +562,7 @@ class Cuber2x(object):
             self.turn_cage(self.turn_ccw_free, 0)
             self.flip(self.flipper_up)
             self.elevate(self.elevator_final_pos)
-
+            self.flip(self.flipper_final_pos)
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
             print(self.next_turn)
@@ -605,7 +614,7 @@ class Cuber2x(object):
             self.turn_cage(self.turn_ccw_free, 0)
             self.flip(self.flipper_up)
             self.elevate(self.elevator_final_pos)
-
+            self.flip(self.flipper_final_pos)
             self.elevate(self.elevate_3x3_1_row)
             self.turn_direction(self.next_turn)
             print(self.next_turn)
@@ -615,7 +624,7 @@ class Cuber2x(object):
             self.elevate(self.elevate_3x3_1_row)
             
             self.flip(self.flipper_final_pos)
-            self.turn_direction(self.next_turn)
+            self.turn_direction(self.next_turn)        
             print(self.next_turn)
 
         elif self.next_turn[0] == 'B':
@@ -657,6 +666,7 @@ if __name__== '__main__':
         #multicuber.connect_to_server()
         #multicuber.scan()
         multicuber.apply_solution()
+
         multicuber.shutdown_robot()
 
 
