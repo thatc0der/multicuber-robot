@@ -64,13 +64,19 @@ class Cuber2x(object):
 
     # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     #received_solution = "R2 L' D"
-    received_solution = "U' L' U' F' R2"
-    #received_solution = "U' L' U' F' R2 B' R F U B2 U B' L U' F U R F' "
+    #received_solution = "U' L' U' F' R2"
+    received_solution = "U' L' U' F' R2 B' R F U B2 U B' L U' F U R F'"
     #received_solution = "R2 L' D F2 R' D' R' L U' D R D B2 R' U D2"
     #received_solution = "F B R U D R2 D B' F2 D' B' L U' L2 B2 R B D2 R2 F R2 D2 R' U B' "
-    curr_turn = 0
-    next_turn = curr_turn + 2
-    last_turn = -1 #can only be updated after first turn is made
+    
+    next_turn = None 
+
+    #transformation lists
+    cw_trans = [0,2,3,4,1,5]
+    ccw_trans = [0,4,1,2,3,5]
+    cw2_trans = [0,3,4,1,2,5]
+    up_trans = [2,1,5,3,0,4]
+    down_trans = [4,1,0,3,5,2]
 
     def __init__(self):
         self.shutdown = False
@@ -121,7 +127,7 @@ class Cuber2x(object):
         log.error('Caught SIGINT')
         self.shutdown_robot()
 
-    def apply_transformation(self, transformation):
+    def apply_trans(self, transformation):
         self.state = [self.state[t] for t in transformation]
 
 
@@ -129,7 +135,6 @@ class Cuber2x(object):
         self.elevator.on_to_position(SpeedDPS(Cuber2x.elevator_speed_up_fast), level)
         sleep(0.05)
 
-        #self.elevator.on_to_position(SpeedDPS(Cuber2x.elevator_speed_down_fast),Cuber2x.elevator_final_pos)
         
     
     def flip(self, direction):
@@ -137,9 +142,12 @@ class Cuber2x(object):
         sleep(0.05)
 
 
-    #Cuber2x.cage_cw_blocked
-    def turn_cage(self, direction, adj):
+    def turn_cage(self, direction, adj, trans):
         
+        #if adj is 0 transformation is happening, because side isn't being turned
+        if adj == 0:
+            self.apply_trans(trans)
+
         self.cage.on_for_degrees(SpeedDPS(Cuber2x.cage_speed_full_cube), direction, brake=True)
         sleep(0.05)
 
@@ -174,7 +182,6 @@ class Cuber2x(object):
         sleep(2)
         self.receive_solution()
 
-
         #orient to solve cube
         self.flip(self.flipper_up)
         self.elevate(self.elevate_3x3_fully)
@@ -201,506 +208,373 @@ class Cuber2x(object):
         print("cleaned solution: \n", self.received_solution)
     
 
-    def apply_first_two_turns(self):
+
+    def move_to_l(self):
         
-        print('lastturn: ', self.last_turn)
-        print('nextturn: ', self.next_turn)
-
-
-        if self.last_turn[0] == 'U':
-            self.elevate(self.elevate_3x3_1_row)
-            
-            self.turn_direction(self.last_turn)
-
-            print(self.last_turn)
-            
-            self.u_on_top()
+        self.elevate(self.elevate_3x3_fully)
+        self.turn_cage(self.turn_cw_free, 0, self.cw_trans)
+        self.flip(self.flipper_up)
+         
+        self.elevate(self.elevator_final_pos)
+        self.flip(self.flipper_final_pos)
+        self.apply_trans(self.down_trans)
         
-        elif self.last_turn[0] == 'L':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.turn_direction(self.last_turn)
-                            
-            print(self.last_turn)
-            self.l_on_top()
-
-        elif self.last_turn[0] == 'F':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-            
-            self.flip(self.flipper_final_pos)
-            self.turn_direction(self.last_turn)
+        self.elevate(self.elevate_3x3_1_row)
+        self.turn_direction(self.next_turn)
                         
-            print(self.last_turn)
-            self.f_on_top()
+        print(self.next_turn)
+    
+    def move_to_f(self):
+    
+        self.flip(self.flipper_up)
+        self.apply_trans(self.up_trans)
+
+        self.elevate(self.elevate_3x3_1_row)
+        
+        self.flip(self.flipper_final_pos)
+        self.turn_direction(self.next_turn)
+                    
+        print(self.next_turn)
+
+    def move_to_r(self):
+
+        self.elevate(self.elevate_3x3_fully)
+        self.turn_cage(self.turn_ccw_free, 0, self.ccw_trans)
+         
+        self.flip(self.flipper_up)
+        self.elevate(self.elevator_final_pos)
+        self.flip(self.flipper_final_pos)
+        self.apply_trans(self.down_trans)
+        self.elevate(self.elevate_3x3_1_row)
+
+        self.turn_direction(self.next_turn)
+        
+        print(self.next_turn)
+    def move_to_b(self):
+
+        self.elevate(self.elevate_3x3_fully)
+        self.turn_cage(self.turn_cw2_free, 0, self.cw2_trans)
+        self.elevate(self.elevator_final_pos)
+        self.flip(self.flipper_up)
+        self.apply_trans(self.up_trans)
+        self.elevate(self.elevate_3x3_1_row)
+        self.flip(self.flipper_final_pos)
+
+
+        self.turn_direction(self.next_turn)
+
+        print(self.next_turn)
+
+    def move_to_d(self):
+        
+        self.flip(self.flipper_up)
+        self.apply_trans(self.up_trans)
+        self.elevate(self.elevate_3x3_fully)
+        self.turn_cage(self.turn_cw2_free, 0, self.cw2_trans)
+        self.elevate(self.elevator_final_pos)
+        self.flip(self.flipper_final_pos)
+        self.apply_trans(self.down_trans)
+        
+        self.elevate(self.elevate_3x3_1_row)
+        
+        self.turn_direction(self.next_turn)
+
+        print(self.next_turn)
+
+    def apply_first_turn(self):
+        
+        if self.next_turn[0] == 'U':
+            self.elevate(self.elevate_3x3_1_row)
+            self.turn_direction(self.next_turn)
+
+            print(self.next_turn)
+            
+        
+        elif self.next_turn[0] == 'L':
+            self.move_to_l()         
+
+        elif self.next_turn[0] == 'F':
+            self.move_to_f()
             
 
-        elif self.last_turn[0] == 'R':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_ccw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.turn_direction(self.last_turn)
-            
-            print(self.last_turn)
-            self.r_on_top()
-
-        elif self.last_turn[0] == 'B':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-            self.flip(self.flipper_final_pos)
+        elif self.next_turn[0] == 'R':
+            self.move_to_r()
 
 
-            self.turn_direction(self.last_turn)
+        elif self.next_turn[0] == 'B':
+            self.move_to_b()
 
-            print(self.last_turn)
-            self.b_on_top() 
-
-        elif self.last_turn[0] == 'D':
-
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-            self.elevate(self.elevate_3x3_1_row)
-            
-            self.turn_direction(self.last_turn)
-
-            print(self.last_turn)
+        elif self.next_turn[0] == 'D':
             self.d_on_top()
+
+
+
+    '''
+    LOGIC:
+
+    R' L' U' F' R2 B' R F U B2 U B' L U' F U R F'
+
+    if next_turn[0] == 'R':
+        get_state()
+
+    6 possible options for get_state
+
+    def get_state(self):
+        if self.state[0] == 'R' and next_turn[0] == 'L':
+            self.r_on_top()
+                
+                inside r_on_top():
+                    it'll move r to l
+
+            
+    '''
+
 
     def apply_solution(self):
         
         print(self.received_solution)
         self.received_solution = self.received_solution.split();
         
-        self.last_turn = self.received_solution[0] 
-        for i in range(1, len(self.received_solution)-1):
-            #print(self.received_solution[i], len(self.received_solution[i]))
+        for i in range(0, len(self.received_solution)):
             
             self.next_turn = self.received_solution[i]# really [i+1]
-            if i == 1:
-                self.apply_first_two_turns()
+            if i == 0:
+                self.apply_first_turn()
+                continue 
             #self.curr_turn = self.received_solution[i]
             #if self.received_solution[i] != self.received_solution[-1]:
             
-
-
-            if self.last_turn[0] == 'U':
+            if self.state[0] == 'U':
                 self.u_on_top()
-            
-            elif self.last_turn[0] == 'L':
+                
+            elif self.state[0] == 'L':
                 self.l_on_top()
-
-            elif self.last_turn[0] == 'F':
+            
+            elif self.state[0] == 'F':
                 self.f_on_top()
 
-            elif self.last_turn[0] == 'R':
+            elif self.state[0] == 'R':
                 self.r_on_top()
+            
+            elif self.state[0] == 'B':
+                self.b_on_top()
 
-            elif self.last_turn[0] == 'B':
-                self.b_on_top() 
-
-            elif self.last_turn[0] == 'D':
+            elif self.state[0] == 'D':
                 self.d_on_top()
+
 
                 
     # rename function because it only handles 2 char turns
     def turn_direction(self, this_turn):
         #since broken up by characters if there is no extra len for cw checkf for len and move
-        if len(this_turn)  == 1:
-            self.turn_cage(self.turn_cw_blocked, self.cw_adj)
+        if len(this_turn) == 1:
+            self.turn_cage(self.turn_cw_blocked, self.cw_adj, None)
             self.elevate(self.elevator_final_pos)
-
+            
 
         elif this_turn[-1] == "'":
-            self.turn_cage(self.turn_ccw_blocked, self.ccw_adj)
+            self.turn_cage(self.turn_ccw_blocked, self.ccw_adj, None)
             self.elevate(self.elevator_final_pos)
 
         elif this_turn[-1] == '2':
-            self.turn_cage(self.turn_cw2_blocked, self.cw2_adj)
+            self.turn_cage(self.turn_cw2_blocked, self.cw2_adj, None)
             self.elevate(self.elevator_final_pos)
+    
+    def turn_u(self):
+        self.elevate(self.elevate_3x3_1_row)
+        self.turn_direction(self.next_turn)
+        print(self.next_turn) 
+
+    def turn_l(self):
+
+        self.elevate(self.elevate_3x3_fully)
+        self.turn_cage(self.turn_cw_free, 0, self.cw_trans)
+        self.flip(self.flipper_up)
+        self.elevate(self.elevator_final_pos)
+        self.flip(self.flipper_final_pos)
+        self.apply_trans(self.down_trans)
+        self.elevate(self.elevate_3x3_1_row)
+        self.turn_direction(self.next_turn)
+        self.last_turn = self.next_turn
+        print(self.next_turn)
+    
+    def turn_f(self):
+        
+        self.flip(self.flipper_up)
+        self.apply_trans(self.up_trans)
+        self.elevate(self.elevate_3x3_1_row)
+        
+        self.flip(self.flipper_final_pos)        
+        self.turn_direction(self.next_turn)
+
+        self.last_turn = self.next_turn
+        print(self.next_turn)
+    
+    def turn_r(self):
+
+        self.elevate(self.elevate_3x3_fully)
+        self.turn_cage(self.turn_ccw_free, 0, self.ccw_trans)
+        self.flip(self.flipper_up)
+        self.elevate(self.elevator_final_pos)
+        self.flip(self.flipper_final_pos)
+        self.apply_trans(self.down_trans)
+        
+        self.elevate(self.elevate_3x3_1_row)
+        self.turn_direction(self.next_turn)
+
+        self.last_turn = self.next_turn
+        print(self.next_turn)
+    
+    def turn_b(self):
+
+        self.elevate(self.elevate_3x3_fully)
+        self.turn_cage(self.turn_cw2_free, 0, self.cw2_trans)
+        self.elevate(self.elevator_final_pos)
+        self.flip(self.flipper_up)
+        self.apply_trans(self.up_trans)
+        self.elevate(self.elevate_3x3_1_row)
+        self.flip(self.flipper_final_pos)
+
+        self.turn_direction(self.next_turn)
+        
+        self.last_turn = self.next_turn
+        print(self.next_turn)
+
+    def turn_d(self):
+
+        self.flip(self.flipper_up)
+        self.apply_trans(self.up_trans)
+        self.elevate(self.elevate_3x3_fully)
+        self.turn_cage(self.turn_cw2_free, 0, self.cw2_trans)
+        self.elevate(self.elevator_final_pos)
+        self.flip(self.flipper_final_pos)
+        self.apply_trans(self.down_trans)
+        self.elevate(self.elevate_3x3_1_row)
+
+        self.turn_direction(self.next_turn)
+
+        self.last_turn = self.next_turn
+        print(self.next_turn)
 
 
     def u_on_top(self):
-        if self.next_turn[0] == 'L':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-           
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
 
-        elif self.next_turn[0] == 'R': #might be broken throughout
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_ccw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
+        #so if U is on top find the position of where next_turn is in then perform adjustments
+        #if next_turn is in position 2 state position 2 to 0
 
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
-
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-        elif self.next_turn[0] == 'F':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-            
-            self.flip(self.flipper_final_pos)        
-            self.turn_direction(self.next_turn)
-
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-           
-
-        elif self.next_turn[0] == 'B':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-            self.flip(self.flipper_final_pos)
-
-            self.turn_direction(self.next_turn)
-            
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-
-
-        elif self.next_turn[0] == 'D':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.turn_direction(self.next_turn)
-
-            self.last_turn = self.next_turn
-            print(self.next_turn)
+        for i in self.state:
+            if self.next_turn[0] == i:
+                
+                if self.state.index(i) == 0:
+                    self.turn_u()
+                elif self.state.index(i) == 1:
+                    self.turn_l()
+                elif self.state.index(i) == 2:
+                    self.turn_f()
+                elif self.state.index(i) == 3:
+                    self.turn_r()
+                elif self.state.index(i) == 4:
+                    self.turn_b()
+                elif self.state.index(i) == 5:
+                    self.turn_d()
+                    
 
     def l_on_top(self):
-        if self.next_turn[0] == 'F':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-           
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
 
-            self.last_turn = self.next_turn
-            print(self.next_turn)
+        for i in self.state:
+            if self.next_turn[0] == i:
                 
-        elif self.next_turn[0] == 'B':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_ccw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
-
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-
-        elif self.next_turn[0] == 'U':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-            self.flip(self.flipper_final_pos)
-            
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-
-        elif self.next_turn[0] == 'D':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.flip(self.flipper_final_pos)
-            
-            
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-            
-
-        elif self.next_turn[0] == 'R':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
+                if self.state.index(i) == 0:
+                    self.turn_u()
+                elif self.state.index(i) == 1:
+                    self.turn_l()
+                elif self.state.index(i) == 2:
+                    self.turn_f()
+                elif self.state.index(i) == 3:
+                    self.turn_r()
+                elif self.state.index(i) == 4:
+                    self.turn_b()
+                elif self.state.index(i) == 5:
+                    self.turn_d()
+        
 
     def f_on_top(self):
-        if self.next_turn[0] == 'L':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-           
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
 
-            
-        elif self.next_turn[0] == 'R':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_ccw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-             
-        elif self.next_turn[0] == 'D':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-            
-            self.flip(self.flipper_final_pos)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-
-        elif self.next_turn[0] == 'U':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.flip(self.flipper_final_pos)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-
-        elif self.next_turn[0] == 'B':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn) 
+        for i in self.state:
+            if self.next_turn[0] == i:
+                
+                if self.state.index(i) == 0:
+                    self.turn_u()
+                elif self.state.index(i) == 1:
+                    self.turn_l()
+                elif self.state.index(i) == 2:
+                    self.turn_f()
+                elif self.state.index(i) == 3:
+                    self.turn_r()
+                elif self.state.index(i) == 4:
+                    self.turn_b()
+                elif self.state.index(i) == 5:
+                    self.turn_d()
+        
 
         
     def r_on_top(self):
-        if self.next_turn[0] == 'B':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-           
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
 
-
-        elif self.next_turn[0] == 'F':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_ccw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-
-        elif self.next_turn[0] == 'U':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-            
-            self.flip(self.flipper_final_pos)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-
-        elif self.next_turn[0] == 'D':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.flip(self.flipper_final_pos)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-
-        elif self.next_turn[0] == 'L':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
+        for i in self.state:
+            if self.next_turn[0] == i:
+                
+                if self.state.index(i) == 0:
+                    self.turn_u()
+                elif self.state.index(i) == 1:
+                    self.turn_l()
+                elif self.state.index(i) == 2:
+                    self.turn_f()
+                elif self.state.index(i) == 3:
+                    self.turn_r()
+                elif self.state.index(i) == 4:
+                    self.turn_b()
+                elif self.state.index(i) == 5:
+                    self.turn_d()
 
     def b_on_top(self):
-        if self.next_turn[0] == 'R':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-           
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
 
-        elif self.next_turn[0] == 'L':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_ccw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-        elif self.next_turn[0] == 'D':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-            
-            self.flip(self.flipper_final_pos)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-        elif self.next_turn[0] == 'U':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.flip(self.flipper_final_pos)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-        elif self.next_turn[0] == 'F':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
+        for i in self.state:
+            if self.next_turn[0] == i:
+                
+                if self.state.index(i) == 0:
+                    self.turn_u()
+                elif self.state.index(i) == 1:
+                    self.turn_l()
+                elif self.state.index(i) == 2:
+                    self.turn_f()
+                elif self.state.index(i) == 3:
+                    self.turn_r()
+                elif self.state.index(i) == 4:
+                    self.turn_b()
+                elif self.state.index(i) == 5:
+                    self.turn_d()
 
     def d_on_top(self):
-        if self.next_turn[0] == 'R':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-           
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-        elif self.next_turn[0] == 'L':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_ccw_free, 0)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-        elif self.next_turn[0] == 'F':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-            
-            self.flip(self.flipper_final_pos)
-            self.turn_direction(self.next_turn)        
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-        elif self.next_turn[0] == 'B':
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.flip(self.flipper_final_pos)
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
-
-        elif self.next_turn[0] == 'U':
-            self.flip(self.flipper_up)
-            self.elevate(self.elevate_3x3_fully)
-            self.turn_cage(self.turn_cw2_free, 0)
-            self.elevate(self.elevator_final_pos)
-            self.flip(self.flipper_final_pos)
-            self.elevate(self.elevate_3x3_1_row)
-
-            self.turn_direction(self.next_turn)
-            self.last_turn = self.next_turn
-            print(self.next_turn)
         
+        for i in self.state:
+            if self.next_turn[0] == i:
+                
+                if self.state.index(i) == 0:
+                    self.turn_u()
+                elif self.state.index(i) == 1:
+                    self.turn_l()
+                elif self.state.index(i) == 2:
+                    self.turn_f()
+                elif self.state.index(i) == 3:
+                    self.turn_r()
+                elif self.state.index(i) == 4:
+                    self.turn_b()
+                elif self.state.index(i) == 5:
+                    self.turn_d()
+                    
+
+
+
 if __name__== '__main__':
    
     logging.basicConfig(level=logging.INFO,format='%(asctime)s %(filename)12s %(levelname)8s: %(message)s')
