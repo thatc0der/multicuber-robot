@@ -18,29 +18,29 @@ class Cuber2x(object):
     
 
     #Elevator Variables
-    elevator_speed_up_fast = 300
-    elevator_speed_up_slow = 300
-    elevator_speed_down_fast = 150
-    elevator_speed_down_slow = 150
+    elevator_speed_up_fast = 600
+    elevator_speed_up_slow = 400
+    elevator_speed_down_fast = 200
+    elevator_speed_down_slow = 200
     
     elevator_final_pos = 0
 
     elevate_2x2_fully = -570
     elevate_2x2_1_row = -450
 
-    elevate_3x3_fully = -550
-    elevate_3x3_1_row = -380
+    elevate_3x3_fully = -540
+    elevate_3x3_1_row = -370
     elevate_3x3_2_rows = -480 
 
     #Flipper Variables
-    flipper_speed_const = 180
+    flipper_speed_const = 500
     
-    flipper_final_pos = 0
+    flipper_final_pos = -1
     flipper_up = 151
 
     #Cage Variables
-    cage_speed_full_cube = 300
-    cage_speed_normal = 300
+    cage_speed_full_cube = 450
+    cage_speed_normal = 450
    
     cw_adj = -35
     ccw_adj = 35
@@ -53,22 +53,23 @@ class Cuber2x(object):
     turn_ccw_blocked = -185
 
     turn_cw2_free = 300
-    turn_cw2_blocked = 345
+    turn_cw2_blocked = 340
 
     turn_final_pos = 0
 
 
     #Networking
-    HOST = "10.13.30.20"
+    HOST = "169.254.17.157"
     PORT = 8080
 
-    # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #received_solution = "R2 L' D"
-    #received_solution = "U' L' U' F' R2"
-    received_solution = "U' L' U' F' R2 B' R F U B2 U B' L U' F U R F'"
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #received_solution = "L U B' U' R L' B R' F B' D R D' F'" #anaconda
+    #received_solution = "R2 L2 F2 B2"
+    #received_solution = "U' R2 L2 F2 B2 U' R L F B' U F2 D2 R2 L2 F2 U2 F2 U' F2" #kilt (scottish skirt)
+    #received_solution = "U' L' U' F' R2 B' R F U B2 U B' L U' F U R F'" #cube in a cube in a cube
     #received_solution = "R2 L' D F2 R' D' R' L U' D R D B2 R' U D2"
     #received_solution = "F B R U D R2 D B' F2 D' B' L U' L2 B2 R B D2 R2 F R2 D2 R' U B' "
-    
+    #received_solution = "U R2 F B R B2 R U2 L B2 R U' D' R2 F R' L B2 U2 F2"    
     next_turn = None 
 
     #transformation lists
@@ -132,14 +133,14 @@ class Cuber2x(object):
 
 
     def elevate(self, level):
-        self.elevator.on_to_position(SpeedDPS(Cuber2x.elevator_speed_up_fast), level)
-        sleep(0.05)
+        self.elevator.on_to_position(SpeedDPS(Cuber2x.elevator_speed_up_fast), level, brake=True)
+        #sleep(0.02)
 
         
     
     def flip(self, direction):
         self.flipper.on_to_position(SpeedDPS(Cuber2x.flipper_speed_const), direction, brake=True)
-        sleep(0.05)
+        #sleep(0.02)
 
 
     def turn_cage(self, direction, adj, trans):
@@ -149,10 +150,10 @@ class Cuber2x(object):
             self.apply_trans(trans)
 
         self.cage.on_for_degrees(SpeedDPS(Cuber2x.cage_speed_full_cube), direction, brake=True)
-        sleep(0.05)
+        sleep(0.02)
 
         self.cage.on_for_degrees(SpeedDPS(Cuber2x.cage_speed_full_cube), adj, brake=True)
-        sleep(0.05)
+        #sleep(0.02)
 
     
     def scan(self):
@@ -161,7 +162,7 @@ class Cuber2x(object):
             sleep(1)
             self.elevate(self.elevate_3x3_fully)
             
-            self.turn_cage(self.cage_cw_free, 0)
+            self.turn_cage(self.turn_cw_free, 0, self.cw_trans)
 
             self.elevate(self.elevator_final_pos)
 
@@ -173,22 +174,24 @@ class Cuber2x(object):
         sleep(1)
         
         self.elevate(self.elevate_3x3_fully)
-        self.turn_cage(self.cage_cw2_free, 0)
+        self.turn_cage(self.turn_cw2_free, 0, self.cw2_trans)
         self.elevate(self.elevator_final_pos)
 
         sleep(0.2)
         log.info('waiting for solution....')
-        #read from file where solution is written to
-        sleep(2)
+
+        sleep(2) 
         self.receive_solution()
+        #read from file where solution is written to
 
         #orient to solve cube
         self.flip(self.flipper_up)
         self.elevate(self.elevate_3x3_fully)
-        self.turn_cage(self.cage_ccw_free, 0)
+        self.turn_cage(self.turn_ccw_free, 0, self.ccw_trans)
         self.flip(self.flipper_final_pos)
         self.elevate(self.elevator_final_pos)
 
+        #self.receive_solution()
     
     def connect_to_server(self):
 
@@ -197,12 +200,15 @@ class Cuber2x(object):
         
     def receive_solution(self):
 
-        #self.received_solution = self.sock.recv(1024)
-        #self.recieved_solution =
+        self.received_solution = self.sock.recv(1024)
+
+        encoding = 'utf-8'
+        self.received_solution = self.received_solution.decode(encoding)
         print("solution is: ", self.received_solution)
         
     
     def decode_solution(self):
+        
         self.received_solution = self.received_solution.replace('\r','').replace('\n','').replace('b','').replace('"','')
 
         print("cleaned solution: \n", self.received_solution)
@@ -284,50 +290,22 @@ class Cuber2x(object):
     def apply_first_turn(self):
         
         if self.next_turn[0] == 'U':
-            self.elevate(self.elevate_3x3_1_row)
-            self.turn_direction(self.next_turn)
-
-            print(self.next_turn)
-            
+            self.turn_u()
         
         elif self.next_turn[0] == 'L':
-            self.move_to_l()         
+            self.turn_l()
 
         elif self.next_turn[0] == 'F':
-            self.move_to_f()
-            
+            self.turn_f()
 
         elif self.next_turn[0] == 'R':
-            self.move_to_r()
-
+            self.turn_r()
 
         elif self.next_turn[0] == 'B':
-            self.move_to_b()
+            self.turn_b()
 
         elif self.next_turn[0] == 'D':
-            self.d_on_top()
-
-
-
-    '''
-    LOGIC:
-
-    R' L' U' F' R2 B' R F U B2 U B' L U' F U R F'
-
-    if next_turn[0] == 'R':
-        get_state()
-
-    6 possible options for get_state
-
-    def get_state(self):
-        if self.state[0] == 'R' and next_turn[0] == 'L':
-            self.r_on_top()
-                
-                inside r_on_top():
-                    it'll move r to l
-
-            
-    '''
+            self.turn_d()
 
 
     def apply_solution(self):
@@ -337,12 +315,10 @@ class Cuber2x(object):
         
         for i in range(0, len(self.received_solution)):
             
-            self.next_turn = self.received_solution[i]# really [i+1]
+            self.next_turn = self.received_solution[i]
             if i == 0:
                 self.apply_first_turn()
                 continue 
-            #self.curr_turn = self.received_solution[i]
-            #if self.received_solution[i] != self.received_solution[-1]:
             
             if self.state[0] == 'U':
                 self.u_on_top()
@@ -456,121 +432,42 @@ class Cuber2x(object):
         self.last_turn = self.next_turn
         print(self.next_turn)
 
+    def determine_next_turn(self):
+
+        for i in self.state:
+            if self.next_turn[0] == i:
+                
+                if self.state.index(i) == 0:
+                    self.turn_u()
+                elif self.state.index(i) == 1:
+                    self.turn_l()
+                elif self.state.index(i) == 2:
+                    self.turn_f()
+                elif self.state.index(i) == 3:
+                    self.turn_r()
+                elif self.state.index(i) == 4:
+                    self.turn_b()
+                elif self.state.index(i) == 5:
+                    self.turn_d()
+
 
     def u_on_top(self):
-
-        #so if U is on top find the position of where next_turn is in then perform adjustments
-        #if next_turn is in position 2 state position 2 to 0
-
-        for i in self.state:
-            if self.next_turn[0] == i:
-                
-                if self.state.index(i) == 0:
-                    self.turn_u()
-                elif self.state.index(i) == 1:
-                    self.turn_l()
-                elif self.state.index(i) == 2:
-                    self.turn_f()
-                elif self.state.index(i) == 3:
-                    self.turn_r()
-                elif self.state.index(i) == 4:
-                    self.turn_b()
-                elif self.state.index(i) == 5:
-                    self.turn_d()
-                    
+       self.determine_next_turn() 
 
     def l_on_top(self):
-
-        for i in self.state:
-            if self.next_turn[0] == i:
-                
-                if self.state.index(i) == 0:
-                    self.turn_u()
-                elif self.state.index(i) == 1:
-                    self.turn_l()
-                elif self.state.index(i) == 2:
-                    self.turn_f()
-                elif self.state.index(i) == 3:
-                    self.turn_r()
-                elif self.state.index(i) == 4:
-                    self.turn_b()
-                elif self.state.index(i) == 5:
-                    self.turn_d()
-        
+       self.determine_next_turn() 
 
     def f_on_top(self):
-
-        for i in self.state:
-            if self.next_turn[0] == i:
-                
-                if self.state.index(i) == 0:
-                    self.turn_u()
-                elif self.state.index(i) == 1:
-                    self.turn_l()
-                elif self.state.index(i) == 2:
-                    self.turn_f()
-                elif self.state.index(i) == 3:
-                    self.turn_r()
-                elif self.state.index(i) == 4:
-                    self.turn_b()
-                elif self.state.index(i) == 5:
-                    self.turn_d()
-        
-
+       self.determine_next_turn() 
         
     def r_on_top(self):
-
-        for i in self.state:
-            if self.next_turn[0] == i:
-                
-                if self.state.index(i) == 0:
-                    self.turn_u()
-                elif self.state.index(i) == 1:
-                    self.turn_l()
-                elif self.state.index(i) == 2:
-                    self.turn_f()
-                elif self.state.index(i) == 3:
-                    self.turn_r()
-                elif self.state.index(i) == 4:
-                    self.turn_b()
-                elif self.state.index(i) == 5:
-                    self.turn_d()
+       self.determine_next_turn() 
 
     def b_on_top(self):
-
-        for i in self.state:
-            if self.next_turn[0] == i:
-                
-                if self.state.index(i) == 0:
-                    self.turn_u()
-                elif self.state.index(i) == 1:
-                    self.turn_l()
-                elif self.state.index(i) == 2:
-                    self.turn_f()
-                elif self.state.index(i) == 3:
-                    self.turn_r()
-                elif self.state.index(i) == 4:
-                    self.turn_b()
-                elif self.state.index(i) == 5:
-                    self.turn_d()
+       self.determine_next_turn() 
 
     def d_on_top(self):
-        
-        for i in self.state:
-            if self.next_turn[0] == i:
-                
-                if self.state.index(i) == 0:
-                    self.turn_u()
-                elif self.state.index(i) == 1:
-                    self.turn_l()
-                elif self.state.index(i) == 2:
-                    self.turn_f()
-                elif self.state.index(i) == 3:
-                    self.turn_r()
-                elif self.state.index(i) == 4:
-                    self.turn_b()
-                elif self.state.index(i) == 5:
-                    self.turn_d()
+       self.determine_next_turn() 
                     
 
 
@@ -589,37 +486,11 @@ if __name__== '__main__':
 
     try:
         
-        #multicuber.connect_to_server()
-        #multicuber.scan()
+        multicuber.connect_to_server()
+        multicuber.scan()
+        multicuber.decode_solution()
         multicuber.apply_solution()
-
         multicuber.shutdown_robot()
-
-
-        #multicuber.flip(multicuber.flipper_up)
-        #multicuber.elevate(multicuber.elevate_3x3_fully) 
-        #multicuber.flip(multicuber.flipper_final_pos)
-        #multicuber.apply_solution()
-        #multicuber.shutdown_robot()
-        #multicuber.apply_solution()
-        #multicuber.shutdown_robot()
-        #multicuber.scan()
-        #multicuber.shutdown_robot()
-        """ 
-        multicuber.elevate(multicuber.elevate_3x3_1_row)
-        multicuber.turn_cage()
-
-        multicuber.elevate(multicuber.elevator_final_pos)
-        multicuber.flip(multicuber.flipper_up)
-        
-        multicuber.elevate(multicuber.elevate_3x3_1_row)
-        multicuber.turn_cage()
-
-        multicuber.flip(multicuber.flipper_final_pos)
-        multicuber.elevate(multicuber.elevator_final_pos)
-        
-        multicuber.shutdown_robot() 
-        """
 
 
     except Exception as e:
