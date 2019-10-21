@@ -17,8 +17,8 @@ log = logging.getLogger(__name__)
 class Cuber2x(object):
     
     #Elevator Variables
-    elevator_up_speed = 400
-    elevator_down_speed = 600
+    elevator_up_speed = 600
+    elevator_down_speed = 800
 
     elevator_final_pos = 0
 
@@ -36,13 +36,13 @@ class Cuber2x(object):
 
     elevator_dest = 0 # this changes through out so this is traced and turns when it is neccessary.
     #Flipper Variables
-    flipper_speed_const = 700
+    flipper_speed_const = 1000
     
     flipper_final_pos = 0 
     flipper_up = 151
 
     #Cage Variables
-    cage_speed_full_cube = 500
+    cage_speed_full_cube = 800
    
     cw_adj = 150 #adjusts aren't really needed I just don't want to recode
     ccw_adj = -150 
@@ -138,31 +138,21 @@ class Cuber2x(object):
 
     def is_almost_done_turning(self):
         while True:
-            if abs(self.cage.position - self.cage_turn_dest) <= 3: 
-                #print('cage curr pos: ', abs(self.cage.position - self.cage_turn_dest) <= 3)
-                #print()
+            if (abs(self.cage.position - self.cage_turn_dest) <= 5): 
                 break
             else:
                 sleep(0.01)
-                #print('cage pos ', self.cage.position," : curr pos: ", self.cage_turn_dest)
-                #print('cage curr pos: ', abs(self.cage.position - self.cage_turn_dest))
-                #print('turning sleeping...')
 
     def is_almost_done_flipping(self):
         while True:
-            if (abs(self.flipper.position - self.flipper_final_pos) <= 3) or (abs(self.flipper.position - self.flipper_up) <= 3):
-
-                #print('flipper final: ', abs(self.flipper.position - self.flipper_final_pos))
-                #print('flipper up: ', abs(self.flipper.position - self.flipper_up))
-                #print()
+            if (abs(self.flipper.position - self.flipper_dest) <= 10):
                 break
             else:
                 sleep(0.01)
-                #print('flipping sleeping')
 
     def is_almost_done_elevating(self):
         while True:
-            if(abs(self.elevator.position - self.elevator_dest) <= 3):
+            if(abs(self.elevator.position - self.elevator_dest) <= 10):
                 break
             else:
                 sleep(0.01)
@@ -191,7 +181,7 @@ class Cuber2x(object):
         
         self.is_almost_done_elevating()
         self.is_almost_done_turning()
-
+        self.flipper_dest = direction
         self.flipper.on_to_position(SpeedDPS(Cuber2x.flipper_speed_const), direction, block=False)
 
 
@@ -203,25 +193,17 @@ class Cuber2x(object):
         #when adj is 0 it must complete turn before going down unlike full rotation which doesn't need alignment.
 
         self.cage.position = 0
-        #print("direction: ", direction, " adjustment: ", adj)
         if adj == 0:
             self.apply_trans(trans)
             
-            #self.curr_cage_pos = direction + adj 
             self.cage_turn_dest = direction 
             self.cage.on_to_position(SpeedDPS(self.cage_speed_full_cube), direction, block=False)
-            #print("Rotated to: ", self.curr_cage_pos)
-            #sleep(2)
             
         else:   
-
-            #self.curr_cage_pos = direction + adj
             
             self.cage_turn_dest = adj
             self.cage.on_to_position(SpeedDPS(self.cage_speed_full_cube), direction)
             self.cage.on_to_position(SpeedDPS(multicuber.cage_speed_full_cube), adj, block=False)
-            #print("Rotated to: ", self.curr_cage_pos)
-            #sleep(2)
     
             
     def scan(self):
@@ -443,7 +425,6 @@ class Cuber2x(object):
         elif self.next_turn[-1] == "2":
             self.apply_trans(self.ccw_trans)
 
-        #print("true: ", self.elevator.position, ":", self.elevate_3x3_fully) 
         self.turn_direction(self.next_turn)
         self.last_turn = self.next_turn
         print(self.next_turn)
